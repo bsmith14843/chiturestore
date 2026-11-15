@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GOO → Chitubox Resin Profile Extractor</title>
+<style>
+  :root{--bg:#111418;--panel:#1a1f26;--line:#2a313b;--txt:#e6e9ee;--dim:#8b95a3;--acc:#3fa7ff;--warn:#ffb547;--ok:#4cd18a}
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.45 system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt)}
+  main{max-width:980px;margin:0 auto;padding:28px 20px 60px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--dim);margin:0 0 20px}
+  #drop{border:2px dashed var(--line);border-radius:10px;padding:34px;text-align:center;cursor:pointer;background:var(--panel);transition:.15s}
+  #drop.hover{border-color:var(--acc);background:#16202b}
+  #drop b{color:var(--acc)}
+  .bar{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0 8px;align-items:center}
+  button{background:var(--acc);color:#04121f;border:0;border-radius:6px;padding:8px 14px;font-weight:600;cursor:pointer}
+  button.sec{background:var(--line);color:var(--txt)}
+  .meta{color:var(--dim);font-size:13px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-top:12px}
+  section{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  section h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--acc);margin:0 0 8px}
+  table{width:100%;border-collapse:collapse}
+  td{padding:4px 0;border-bottom:1px solid #222831;vertical-align:top}
+  td:last-child{text-align:right;font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap;padding-left:10px}
+  tr:last-child td{border-bottom:0}
+  .note{border-left:3px solid var(--warn);background:#221c10;padding:8px 12px;border-radius:4px;margin:10px 0;color:#f3dcb0}
+  .okn{border-left-color:var(--ok);background:#10221a;color:#bfeed4}
+  .err{border-left-color:#ff5a5a;background:#2a1212;color:#ffc9c9}
+  #out{display:none}
+  small{color:var(--dim)}
+</style>
+</head>
+<body>
+<main>
+  <h1>GOO → Chitubox Resin Profile Extractor</h1>
+  <p class="sub">Exports a .cfgx you can import in Chitubox (Slice Settings → Import profile). Drop a .goo file you printed with. Everything is read locally in your browser — nothing is uploaded. Only the header and a few layer records are read, so big files load instantly.</p>
+
+  <div id="drop"><b>Drop a .goo file here</b> or click to choose<input id="file" type="file" accept=".goo" hidden></div>
+
+  <div id="out">
+    <div class="bar">
+      <input id="pname" placeholder="Profile name" style="background:#0d1116;border:1px solid var(--line);color:var(--txt);border-radius:6px;padding:7px 10px;width:200px">
+      <button id="dlCfgx">Export Chitubox .cfgx</button>
+      <button class="sec" id="copy">Copy settings</button>
+      <button class="sec" id="dlTxt">Download .txt</button>
+      <button class="sec" id="dlJson">Download .json</button>
+      <span class="meta" id="meta"></span>
+    </div>
+    <div id="notes"></div>
+    <div class="grid" id="grid"></div>
+  </div>
+</main>
+
+<script>
+"use strict";
+const HEADER_SIZE = 0x2FB95; // 195477
+
+/* ---------- binary reader (big-endian) ---------- */
+class R {
+  constructor(buf){ this.v = new DataView(buf); this.o = 0; this.buf = buf; }
+  str(n){ const b=new Uint8Array(this.buf,this.o,n); this.o+=n; let e=b.indexOf(0); if(e<0)e=n; return new TextDecoder().decode(b.subarray(0,e)).trim(); }
+  skip(n){ this.o+=n; }
+  u8(){ return this.v.getUint8(this.o++); }
+  bool(){ return this.u8()!==0; }
+  u16(){ const x=this.v.getUint16(this.o,false); this.o+=2; return x; }
+  u32(){ const x=this.v.getUint32(this.o,false); this.o+=4; return x; }
+  f32(){ const x=this.v.getFloat32(this.o,false); this.o+=4; return x; }
+  delim(what){ const a=this.u8(), b=this.u8(); if(a!==0x0D||b!==0x0A) throw new Error(`Bad delimiter after ${what} at 0x${(this.o-2).toString(16)} — not a valid V3 .goo file`); }
+}
+
+function parseHeader(buf){
+  const r = new R(buf), h = {};
+  h.version = r.str(4);
+  if(!/^V3/.test(h.version)) throw new Error(`Unsupported GOO version "${h.version}" (expected V3.x)`);
+  r.skip(8); // magic
+  h.software_info=r.str(32); h.software_version=r.str(24); h.file_time=r.str(24);
+  h.printer_name=r.str(32); h.printer_type=r.str(32); h.profile_name=r.str(32);
+  h.anti_aliasing_level=r.u16(); h.grey_level=r.u16(); h.blur_level=r.u16();
+  r.skip(116*116*2); r.delim("small preview");
+  r.skip(290*290*2); r.delim("big preview");
+  h.layer_count=r.u32(); h.x_resolution=r.u16(); h.y_resolution=r.u16();
+  h.x_mirror=r.bool(); h.y_mirror=r.bool();
+  h.x_size=r.f32(); h.y_size=r.f32(); h.z_size=r.f32();
+  h.layer_thickness=r.f32(); h.exposure_time=r.f32();
+  h.exposure_delay_static=r.bool();       // false = turn-off (light-off) delay, true = static rest times
+  h.turn_off_time=r.f32();
+  h.bottom_before_lift_time=r.f32(); h.bottom_after_lift_time=r.f32(); h.bottom_after_retract_time=r.f32();
+  h.before_lift_time=r.f32(); h.after_lift_time=r.f32(); h.after_retract_time=r.f32();
+  h.bottom_exposure_time=r.f32(); h.bottom_layers=r.u32();
+  h.bottom_lift_distance=r.f32(); h.bottom_lift_speed=r.f32();
+  h.lift_distance=r.f32(); h.lift_speed=r.f32();
+  h.bottom_retract_distance=r.f32(); h.bottom_retract_speed=r.f32();
+  h.retract_distance=r.f32(); h.retract_speed=r.f32();
+  h.bottom_second_lift_distance=r.f32(); h.bottom_second_lift_speed=r.f32();
+  h.second_lift_distance=r.f32(); h.second_lift_speed=r.f32();
+  h.bottom_second_retract_distance=r.f32(); h.bottom_second_retract_speed=r.f32();
+  h.second_retract_distance=r.f32(); h.second_retract_speed=r.f32();
+  h.bottom_light_pwm=Math.min(255,r.u16()); h.light_pwm=Math.min(255,r.u16());
+  h.advance_mode=r.bool();
+  h.printing_time=r.u32(); h.total_volume=r.f32(); h.total_weight=r.f32(); h.total_price=r.f32();
+  h.price_unit=r.str(8);
+  r.u32(); // layer content offset (== header size)
+  h.grey_scale_level=r.bool(); h.transition_layers=r.u16();
+  if(r.o!==HEADER_SIZE) throw new Error(`Header length mismatch (${r.o} vs ${HEADER_SIZE})`);
+  return h;
+}
+
+function parseLayerDef(buf){
+  const r=new R(buf), L={};
+  L.pause=r.u16()!==0; L.pause_z=r.f32(); L.z=r.f32();
+  L.exposure_time=r.f32(); L.off_time=r.f32();
+  L.before_lift_time=r.f32(); L.after_lift_time=r.f32(); L.after_retract_time=r.f32();
+  L.lift_distance=r.f32(); L.lift_speed=r.f32();
+  L.second_lift_distance=r.f32(); L.second_lift_speed=r.f32();
+  L.retract_distance=r.f32(); L.retract_speed=r.f32();
+  L.second_retract_distance=r.f32(); L.second_retract_speed=r.f32();
+  L.light_pwm=Math.min(255,r.u16());
+  r.delim("layer definition");
+  L.data_size=r.u32();
+  return L;
+}
+
+async function readLayers(file, h, wanted){
+  // walk layer records sequentially, reading only the 70-byte definition of each
+  const out={}, max=Math.max(...wanted);
+  let off=HEADER_SIZE;
+  for(let i=0;i<=max && i<h.layer_count;i++){
+    const buf=await file.slice(off,off+70).arrayBuffer();
+    if(buf.byteLength<70) break;
+    const L=parseLayerDef(buf);
+    if(wanted.includes(i)) out[i]=L;
+    off+=72+L.data_size;
+  }
+  return out;
+}
+
+/* ---------- formatting ---------- */
+const n=(x,d=2)=>{ if(x==null||!isFinite(x)) return "—"; const v=+x.toFixed(d); return String(v); };
+const hms=s=>{ s=Math.round(s); const h=Math.floor(s/3600), m=Math.floor(s%3600/60); return `${h}h ${m}m`; };
+const same=(a,b)=>Math.abs(a-b)<1e-4;
+
+
+/* ---------- Chitubox .cfgx export ---------- */
+const CFGX_TEMPLATE = {"create_time":"","id":"","version":"","printerinfo":{"vendor":"ELEGOO","direction_type":"Front","input_slice_suffixs":"CHITUBOX slicer(*.cbddlp);;CHITUBOX slicer(*.ctb);;Photon Series(*.photon);;WoW(*.wow);;Fhd(*.fhd);;SLC(*.slc);;ZIP(*.zip);;NOVA3D(*.cws);;CHITUBOX general format(*.gf);;Phrozen file(*.phz);;FlashDLPrint file(*.svgx);;fdg(*.fdg);;Goo(*.goo);;Prz(*.prz)","output_slice_suffixs":"CHITUBOX slicer(*.ctb);;CHITUBOX slicer(*.goo)","net_send_slice_suffixs":"CHITUBOX slicer(*.ctb);;CHITUBOX slicer(*.goo)","netsending":{"currentvalue":true},"machinetype":{"currentvalue":"ELEGOO Saturn 4 Ultra 16K"},"machinename":{"currentvalue":"ELEGOO Saturn 4 Ultra 16K"},"projecttype":{"currentvalue":1},"resolutionx":{"currentvalue":15120},"resolutiony":{"currentvalue":6230},"machinewidth":{"currentvalue":211.67999267578125},"machinedepth":{"currentvalue":118.37000274658203},"machineheight":{"currentvalue":220.0},"blockxysizeRatio":{"currentvalue":false},"resolutionLock":{"currentvalue":false},"sizeLock":{"currentvalue":false},"bdisplaycorrectenable":{"currentvalue":false},"displaycorrectlefttopx":{"currentvalue":0.0},"displaycorrectlefttopy":{"currentvalue":0.0},"displaycorrectrighttopx":{"currentvalue":0.0},"displaycorrectrighttopy":{"currentvalue":0.0},"displaycorrectleftbottomx":{"currentvalue":0.0},"displaycorrectleftbottomy":{"currentvalue":0.0},"displaycorrectrightbottomx":{"currentvalue":0.0},"displaycorrectrightbottomy":{"currentvalue":0.0},"bbuildareaoffsetenable":{"currentvalue":false},"buildareaoffsetleft":{"currentvalue":0.0},"buildareaoffsetright":{"currentvalue":0.0},"buildareaoffsettop":{"currentvalue":0.0},"buildareaoffsetbottom":{"currentvalue":0.0},"printtype":{"currentvalue":0},"mirrortype":{"currentvalue":0},"sliceformat":{"currentvalue":0},"zliftheightinsupportmode":{"currentvalue":5.0},"raftshape":{"currentvalue":0},"autoSupportMode":{"currentvalue":0},"autoSupportType":{"currentvalue":2}},"current_support":2,"current_material":0,"current_magic":0,"current_multislice":0,"material":[{"name":"Default","id":"","visible":true,"current_slice":0,"current_support":0,"user_data":true,"slice":[{"visible":true,"name":"Frustrating","resin":{"visible":true,"resintype":{"currentvalue":"normal"},"resindensity":{"currentvalue":1.100000023841858},"resincost":{"currentvalue":30.0},"resinunit":{"currentvalue":1},"resincostmeasure":{"currentvalue":1},"resinmassunit":{"currentvalue":0},"color":{"currentvalue":0},"is_transparent":{"currentvalue":false},"name":{"currentvalue":"normal"}},"print":{"visible":true,"bottom_layer_drop_height_visible":false,"normal_layer_drop_height_visible":false,"matchingresinmodel":{"currentvalue":0},"matchingresintips":{"currentvalue":""},"layerheight":{"currentvalue":0.05000000074505806},"bottomlayercount":{"currentvalue":5},"normalexposuretime":{"currentvalue":2.299999952316284},"bottomlayerexposuretime":{"currentvalue":32.0},"transitionlayercount":{"currentvalue":10},"transitionlayertype":{"currentvalue":0},"printwaitmode":{"currentvalue":0},"normalresttimebeforelift":{"currentvalue":0.0},"bottomresttimebeforelift":{"currentvalue":0.0},"normalresttimeafterretract":{"currentvalue":1.2000000476837158},"bottomresttimeafterretract":{"currentvalue":0.5},"normalresttimeafterlift":{"currentvalue":0.0},"bottomresttimeafterlift":{"currentvalue":0.0},"lightofftime":{"currentvalue":0.0},"bottomlightofftime":{"currentvalue":0.0},"bottomlayerliftheight":{"currentvalue":0.05000000074505806},"normallayerliftheight":{"currentvalue":0.05000000074505806},"bottomlayerliftheight2":{"currentvalue":0.0},"normallayerliftheight2":{"currentvalue":0.0},"bottomlayerliftspeed":{"currentvalue":0.05000000074505806},"normallayerliftspeed":{"currentvalue":0.05000000074505806},"bottomlayerliftspeed2":{"currentvalue":0.0},"normallayerliftspeed2":{"currentvalue":0.0},"bottomlayerdropspeed":{"currentvalue":0.05000000074505806},"normallayerdropspeed":{"currentvalue":0.05000000074505806},"bottomlayerdropspeed2":{"currentvalue":0.0},"normallayerdropspeed2":{"currentvalue":0.0},"normallayerdropheight2":{"currentvalue":0.0},"bottomlayerdropheight2":{"currentvalue":0.0},"edgeexposuremm":{"currentvalue":0.0},"bottomedgeexposuremm":{"currentvalue":0.0},"edgeexposuretimes":{"currentvalue":4.0},"bottomedgeexposuretimes":{"currentvalue":4.0},"ac_mode_type":{"currentvalue":true},"bufferenable":{"currentvalue":false},"bufferheight":{"currentvalue":0.0},"bufferMotrospeed":{"currentvalue":0.0},"bufferlightoffdelay":{"currentvalue":0.0}},"gcode":{"visible":false,"bgcode":{"currentvalue":true},"startgcode":{"currentvalue":""},"layergcode":{"currentvalue":""},"endgcode":{"currentvalue":""}},"advanced":{"visible":true,"bottomlightintensitypwm":{"currentvalue":255},"bottomlightintensitypwmshowmode":{"currentvalue":0},"normallightintensitypwm":{"currentvalue":255},"normallightintensitypwmshowmode":{"currentvalue":0},"bantialiasing":{"currentvalue":true},"edgeblurtype":{"currentvalue":0},"antialiaslevel":{"currentvalue":1},"midgreylevel":{"currentvalue":255},"mingreylevel":{"currentvalue":95},"maxgreylevel":{"currentvalue":255},"bimageblur":{"currentvalue":false},"imageblurpixel":{"currentvalue":0},"binnerouttercircleoffsetenable":{"currentvalue":false},"bprinttimecompensationenable":{"currentvalue":false},"innercircleoffset":{"currentvalue":0.0},"outtercircleoffset":{"currentvalue":0.0},"circleparitydifference":{"currentvalue":0.0},"bbottominnerouttercircleoffsetenable":{"currentvalue":false},"bottominnercircleoffset":{"currentvalue":0.0},"bottomouttercircleoffset":{"currentvalue":0.0},"bimagemask":{"currentvalue":false},"imagemaskfile":{"currentvalue":""},"bsurfacerougheditable":{"currentvalue":false},"surfaceroughlevel":{"currentvalue":1},"maskgrayscaleunit":{"currentvalue":4},"modelsupporttimesub":{"currentvalue":0.0},"softwareprintingtimehour":{"currentvalue":0},"softwareprintingtimeminute":{"currentvalue":0},"softwareprintingtimesecond":{"currentvalue":0},"actualprintingtimehour":{"currentvalue":0},"actualprintingtimeminute":{"currentvalue":0},"actualprintingtimesecond":{"currentvalue":0},"printinglayer":{"currentvalue":1},"layerprinttime":{"currentvalue":6.789999961853027},"enable_obscure":{"currentvalue":true},"obscure_level":{"currentvalue":0},"enable_scale_compensation":{"currentvalue":false},"compensation_x":{"currentvalue":100.0},"compensation_y":{"currentvalue":100.0},"compensation_z":{"currentvalue":100.0},"centerOffsetX":{"currentvalue":0.0},"centerOffsetY":{"currentvalue":0.0},"centerCount":{"currentvalue":5},"centerRadius":{"currentvalue":50.0},"matrixXCount":{"currentvalue":5},"matrixYCount":{"currentvalue":5},"printMode":{"currentvalue":0}},"id":""}]}],"support":[],"magic":[],"multiSliceConfig":{"areaSliceModel":{"defaultProFileCurIndex":0,"sliceModel":[]},"heightSliceModel":{"defaultProFileCurIndex":0,"sliceModel":[]},"modelSliceModel":{"defaultProFileCurIndex":0,"sliceModel":[]}}};
+
+function makeCfgx(h, s, name){
+  const t = JSON.parse(JSON.stringify(CFGX_TEMPLATE));
+  t.printerinfo.resolutionx.currentvalue = h.x_resolution;
+  t.printerinfo.resolutiony.currentvalue = h.y_resolution;
+  const sl = t.material[0].slice[0];
+  sl.name = name;
+  sl.resin.name.currentvalue = name;
+  const P = sl.print, A = sl.advanced;
+  const set = (o,k,v)=>{ if(!(k in o)) throw new Error("template missing "+k); o[k].currentvalue = v; };
+  set(P,"layerheight", h.layer_thickness);
+  set(P,"bottomlayercount", h.bottom_layers);
+  set(P,"normalexposuretime", s.exposure);
+  set(P,"bottomlayerexposuretime", s.bExposure);
+  set(P,"transitionlayercount", h.transition_layers);
+  set(P,"transitionlayertype", 0); // linear
+  if(h.exposure_delay_static){
+    set(P,"printwaitmode", 0); // Resting time
+    set(P,"bottomresttimebeforelift", h.bottom_before_lift_time);
+    set(P,"bottomresttimeafterlift", h.bottom_after_lift_time);
+    set(P,"bottomresttimeafterretract", h.bottom_after_retract_time);
+    set(P,"normalresttimebeforelift", h.before_lift_time);
+    set(P,"normalresttimeafterlift", h.after_lift_time);
+    set(P,"normalresttimeafterretract", h.after_retract_time);
+  } else {
+    set(P,"printwaitmode", 1); // Light-off delay
+    set(P,"lightofftime", h.turn_off_time);
+    set(P,"bottomlightofftime", h.turn_off_time);
+  }
+  // motion (mm, mm/min). Chitubox has no separate retract distance: it retracts what it lifted.
+  set(P,"bottomlayerliftheight", s.bLift);   set(P,"bottomlayerliftspeed", s.bLiftSp);
+  set(P,"normallayerliftheight", s.lift);    set(P,"normallayerliftspeed", s.liftSp);
+  set(P,"bottomlayerliftheight2", s.bLift2); set(P,"bottomlayerliftspeed2", s.bLiftSp2);
+  set(P,"normallayerliftheight2", s.lift2);  set(P,"normallayerliftspeed2", s.liftSp2);
+  set(P,"bottomlayerdropspeed", s.bRetSp);   set(P,"normallayerdropspeed", s.retSp);
+  set(P,"bottomlayerdropspeed2", s.bRetSp2); set(P,"normallayerdropspeed2", s.retSp2);
+  set(P,"bottomlayerdropheight2", s.bRet2);  set(P,"normallayerdropheight2", s.ret2);
+  set(A,"bottomlightintensitypwm", s.bPwm);
+  set(A,"normallightintensitypwm", s.pwm);
+  if(h.anti_aliasing_level>0){ set(A,"bantialiasing", true); set(A,"antialiaslevel", h.anti_aliasing_level); }
+  set(A,"bimageblur", h.blur_level>0); set(A,"imageblurpixel", h.blur_level);
+  // round float noise (2.299999952 -> 2.3)
+  return JSON.stringify(t,(k,v)=>typeof v==="number"&&!Number.isInteger(v)?+v.toFixed(4):v,4);
+}
+
+let dl=null;
+(async()=>{ try{ if(window.claude&&window.claude.use) dl=await window.claude.use("downloads"); }catch{} })();
+async function saveFile(filename, data, type){
+  if(dl){ try{ await dl.save({filename,data}); return; }catch(e){ console.warn(e); return; } }
+  download(filename,data,type);
+}
+
+let current=null;
+
+function build(h, layers, fname){
+  const bottomIdx=0, normIdx=Math.min(h.bottom_layers+h.transition_layers, h.layer_count-1);
+  const LB=layers[bottomIdx], LN=layers[normIdx];
+  const twoStage=[h.bottom_second_lift_distance,h.second_lift_distance,h.bottom_second_retract_distance,h.second_retract_distance].some(v=>v>0);
+  const notes=[];
+
+  // In Advanced (per-layer) mode, the printer uses the per-layer values — prefer those if they differ.
+  const pick=(hdr, lay, label)=>{
+    if(h.advance_mode && lay!=null && !same(hdr,lay)){ notes.push(`<b>${label}</b>: header says ${n(hdr)}, layer data says ${n(lay)} — showing layer value (what the printer actually used).`); return lay; }
+    return hdr;
+  };
+
+  const s={
+    exposure: pick(h.exposure_time, LN&&LN.exposure_time, "Exposure time"),
+    bExposure: pick(h.bottom_exposure_time, LB&&LB.exposure_time, "Bottom exposure time"),
+    lift: pick(h.lift_distance, LN&&LN.lift_distance, "Lift distance"),
+    liftSp: pick(h.lift_speed, LN&&LN.lift_speed, "Lift speed"),
+    bLift: pick(h.bottom_lift_distance, LB&&LB.lift_distance, "Bottom lift distance"),
+    bLiftSp: pick(h.bottom_lift_speed, LB&&LB.lift_speed, "Bottom lift speed"),
+    ret: pick(h.retract_distance, LN&&LN.retract_distance, "Retract distance"),
+    retSp: pick(h.retract_speed, LN&&LN.retract_speed, "Retract speed"),
+    bRet: pick(h.bottom_retract_distance, LB&&LB.retract_distance, "Bottom retract distance"),
+    bRetSp: pick(h.bottom_retract_speed, LB&&LB.retract_speed, "Bottom retract speed"),
+    lift2: pick(h.second_lift_distance, LN&&LN.second_lift_distance, "Lift distance 2"),
+    liftSp2: pick(h.second_lift_speed, LN&&LN.second_lift_speed, "Lift speed 2"),
+    bLift2: pick(h.bottom_second_lift_distance, LB&&LB.second_lift_distance, "Bottom lift distance 2"),
+    bLiftSp2: pick(h.bottom_second_lift_speed, LB&&LB.second_lift_speed, "Bottom lift speed 2"),
+    ret2: pick(h.second_retract_distance, LN&&LN.second_retract_distance, "Retract distance 2"),
+    retSp2: pick(h.second_retract_speed, LN&&LN.second_retract_speed, "Retract speed 2"),
+    bRet2: pick(h.bottom_second_retract_distance, LB&&LB.second_retract_distance, "Bottom retract distance 2"),
+    bRetSp2: pick(h.bottom_second_retract_speed, LB&&LB.second_retract_speed, "Bottom retract speed 2"),
+    pwm: pick(h.light_pwm, LN&&LN.light_pwm, "Light PWM"),
+    bPwm: pick(h.bottom_light_pwm, LB&&LB.light_pwm, "Bottom light PWM"),
+  };
+
+  const groups=[];
+  groups.push(["General",[
+    ["Layer height (mm)", n(h.layer_thickness,3)],
+    ["Bottom layer count", h.bottom_layers],
+    ["Transition layer count", h.transition_layers],
+    ["Exposure time (s)", n(s.exposure)],
+    ["Bottom exposure time (s)", n(s.bExposure)],
+  ]]);
+
+  if(h.exposure_delay_static){
+    groups.push(["Waiting mode: Resting time",[
+      ["Bottom rest time before lift (s)", n(h.bottom_before_lift_time)],
+      ["Bottom rest time after lift (s)", n(h.bottom_after_lift_time)],
+      ["Bottom rest time after retract (s)", n(h.bottom_after_retract_time)],
+      ["Rest time before lift (s)", n(h.before_lift_time)],
+      ["Rest time after lift (s)", n(h.after_lift_time)],
+      ["Rest time after retract (s)", n(h.after_retract_time)],
+    ]]);
+  } else {
+    groups.push(["Waiting mode: Light-off delay",[
+      ["Light-off delay (s)", n(h.turn_off_time)],
+    ]]);
+  }
+
+  if(twoStage){
+    groups.push(["Bottom motion (two-stage)",[
+      ["Bottom lift distance (mm)", n(s.bLift)],
+      ["Bottom lift speed (mm/min)", n(s.bLiftSp,0)],
+      ["Bottom lift distance 2 (mm)", n(s.bLift2)],
+      ["Bottom lift speed 2 (mm/min)", n(s.bLiftSp2,0)],
+      ["Bottom retract distance (mm)", n(s.bRet)],
+      ["Bottom retract speed (mm/min)", n(s.bRetSp,0)],
+      ["Bottom retract distance 2 (mm)", n(s.bRet2)],
+      ["Bottom retract speed 2 (mm/min)", n(s.bRetSp2,0)],
+    ]]);
+    groups.push(["Normal motion (two-stage)",[
+      ["Lift distance (mm)", n(s.lift)],
+      ["Lift speed (mm/min)", n(s.liftSp,0)],
+      ["Lift distance 2 (mm)", n(s.lift2)],
+      ["Lift speed 2 (mm/min)", n(s.liftSp2,0)],
+      ["Retract distance (mm)", n(s.ret)],
+      ["Retract speed (mm/min)", n(s.retSp,0)],
+      ["Retract distance 2 (mm)", n(s.ret2)],
+      ["Retract speed 2 (mm/min)", n(s.retSp2,0)],
+    ]]);
+    notes.push(`Two-stage motion is on. Values are in the order the file stores them (stage 1, then stage 2). Total lift = distance + distance 2 (bottom: ${n(s.bLift+s.bLift2)} mm, normal: ${n(s.lift+s.lift2)} mm). Check each pair against Chitubox's two-stage fields as you enter them.`);
+  } else {
+    groups.push(["Bottom motion",[
+      ["Bottom lift distance (mm)", n(s.bLift)],
+      ["Bottom lift speed (mm/min)", n(s.bLiftSp,0)],
+      ["Bottom retract distance (mm)", n(s.bRet)],
+      ["Bottom retract speed (mm/min)", n(s.bRetSp,0)],
+    ]]);
+    groups.push(["Normal motion",[
+      ["Lift distance (mm)", n(s.lift)],
+      ["Lift speed (mm/min)", n(s.liftSp,0)],
+      ["Retract distance (mm)", n(s.ret)],
+      ["Retract speed (mm/min)", n(s.retSp,0)],
+    ]]);
+  }
+
+  groups.push(["Light & anti-aliasing",[
+    ["Bottom light PWM", s.bPwm],
+    ["Light PWM", s.pwm],
+    ["Anti-aliasing level", h.anti_aliasing_level],
+    ["Grey level", h.grey_level],
+    ["Image blur", h.blur_level],
+  ]]);
+
+  groups.push(["File info (reference)",[
+    ["Sliced by", `${h.software_info} ${h.software_version}`.trim()],
+    ["Printer", h.printer_name || h.printer_type || "—"],
+    ["Profile name in file", h.profile_name || "—"],
+    ["Sliced", h.file_time || "—"],
+    ["Resolution", `${h.x_resolution} × ${h.y_resolution}`],
+    ["Layers", h.layer_count],
+    ["Advanced (per-layer) mode", h.advance_mode ? "Yes" : "No"],
+    ["Est. print time", hms(h.printing_time)],
+    ["Resin volume (ml)", n(h.total_volume/1000,1)],
+  ]]);
+
+  const pauses=Object.values(layers).filter(l=>l.pause).length;
+  if(pauses) notes.push("This file contains pause layers — those are per-print, not part of a resin profile.");
+  if(!notes.length) notes.push("Header and layer data agree. These are the exact values this print used.");
+
+  current={fname, header:h, groups, s, layerSamples:{bottom:LB, normal:LN}};
+  const pn=document.getElementById('pname'); if(!pn.value) pn.value=(h.profile_name&&h.profile_name!=='normal'?h.profile_name:fname.replace(/\.goo$/i,''));
+  render(groups, notes, h, fname);
+}
+
+function render(groups, notes, h, fname){
+  document.getElementById("out").style.display="block";
+  document.getElementById("meta").textContent=`${fname} · ${h.software_info} · ${h.layer_count} layers`;
+  document.getElementById("notes").innerHTML=notes.map((t,i)=>`<div class="note ${notes.length===1&&/agree/.test(t)?'okn':''}">${t}</div>`).join("");
+  document.getElementById("grid").innerHTML=groups.map(([title,rows])=>
+    `<section><h2>${title}</h2><table>${rows.map(([k,v])=>`<tr><td>${k}</td><td>${v}</td></tr>`).join("")}</table></section>`).join("");
+}
+
+function asText(){
+  if(!current) return "";
+  let t=`Resin profile extracted from ${current.fname}\n`;
+  for(const [title,rows] of current.groups){
+    t+=`\n[${title}]\n`;
+    const w=Math.max(...rows.map(r=>r[0].length));
+    for(const [k,v] of rows) t+=`${k.padEnd(w)}  ${v}\n`;
+  }
+  return t;
+}
+function download(name, text, type){
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([text],{type}));
+  a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+}
+const base=()=>current.fname.replace(/\.goo$/i,"");
+
+async function handle(file){
+  const notes=document.getElementById("notes");
+  try{
+    const head=await file.slice(0,HEADER_SIZE).arrayBuffer();
+    if(head.byteLength<HEADER_SIZE) throw new Error("File is too small to be a .goo file.");
+    const h=parseHeader(head);
+    const normIdx=Math.min(h.bottom_layers+h.transition_layers, h.layer_count-1);
+    let layers={};
+    try{ layers=await readLayers(file,h,[0,normIdx]); }catch(e){ console.warn(e); }
+    build(h,layers,file.name);
+  }catch(e){
+    document.getElementById("out").style.display="block";
+    document.getElementById("grid").innerHTML="";
+    notes.innerHTML=`<div class="note err">${e.message}</div>`;
+  }
+}
+
+const drop=document.getElementById("drop"), inp=document.getElementById("file");
+drop.onclick=()=>inp.click();
+inp.onchange=()=>inp.files[0]&&handle(inp.files[0]);
+["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("hover");}));
+["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("hover");}));
+drop.addEventListener("drop",e=>{const f=e.dataTransfer.files[0]; if(f) handle(f);});
+document.getElementById("copy").onclick=async e=>{ try{await navigator.clipboard.writeText(asText()); e.target.textContent="Copied ✓";}catch{ e.target.textContent="Copy blocked — use .txt"; } setTimeout(()=>e.target.textContent="Copy settings",1500); };
+document.getElementById("dlCfgx").onclick=()=>{ if(!current) return; const name=(document.getElementById("pname").value||base()).trim(); saveFile(name.replace(/[\\/:*?"<>|]/g,"_")+".cfgx", makeCfgx(current.header,current.s,name), "application/json"); };
+document.getElementById("dlTxt").onclick=()=>current&&saveFile(base()+"_resin_profile.txt",asText(),"text/plain");
+document.getElementById("dlJson").onclick=()=>current&&saveFile(base()+"_resin_profile.json",JSON.stringify({source:current.fname,header:current.header,layerSamples:current.layerSamples},null,2),"application/json");
+
+// Downloads are blocked when hosted in a sandboxed frame; keep them for the local copy only.
+
+
+if(typeof module!=="undefined") module.exports={parseHeader,parseLayerDef,HEADER_SIZE,makeCfgx};
+</script>
+</body>
+</html>
