@@ -1,0 +1,462 @@
+{
+    "create_time": "",
+    "id": "",
+    "version": "",
+    "printerinfo": {
+        "vendor": "ELEGOO",
+        "direction_type": "Front",
+        "input_slice_suffixs": "CHITUBOX slicer(*.cbddlp);;CHITUBOX slicer(*.ctb);;Photon Series(*.photon);;WoW(*.wow);;Fhd(*.fhd);;SLC(*.slc);;ZIP(*.zip);;NOVA3D(*.cws);;CHITUBOX general format(*.gf);;Phrozen file(*.phz);;FlashDLPrint file(*.svgx);;fdg(*.fdg);;Goo(*.goo);;Prz(*.prz)",
+        "output_slice_suffixs": "CHITUBOX slicer(*.ctb);;CHITUBOX slicer(*.goo)",
+        "net_send_slice_suffixs": "CHITUBOX slicer(*.ctb);;CHITUBOX slicer(*.goo)",
+        "netsending": {
+            "currentvalue": true
+        },
+        "machinetype": {
+            "currentvalue": "ELEGOO Saturn 4 Ultra 16K"
+        },
+        "machinename": {
+            "currentvalue": "ELEGOO Saturn 4 Ultra 16K"
+        },
+        "projecttype": {
+            "currentvalue": 1
+        },
+        "resolutionx": {
+            "currentvalue": 15120
+        },
+        "resolutiony": {
+            "currentvalue": 6230
+        },
+        "machinewidth": {
+            "currentvalue": 211.68
+        },
+        "machinedepth": {
+            "currentvalue": 118.37
+        },
+        "machineheight": {
+            "currentvalue": 220
+        },
+        "blockxysizeRatio": {
+            "currentvalue": false
+        },
+        "resolutionLock": {
+            "currentvalue": false
+        },
+        "sizeLock": {
+            "currentvalue": false
+        },
+        "bdisplaycorrectenable": {
+            "currentvalue": false
+        },
+        "displaycorrectlefttopx": {
+            "currentvalue": 0
+        },
+        "displaycorrectlefttopy": {
+            "currentvalue": 0
+        },
+        "displaycorrectrighttopx": {
+            "currentvalue": 0
+        },
+        "displaycorrectrighttopy": {
+            "currentvalue": 0
+        },
+        "displaycorrectleftbottomx": {
+            "currentvalue": 0
+        },
+        "displaycorrectleftbottomy": {
+            "currentvalue": 0
+        },
+        "displaycorrectrightbottomx": {
+            "currentvalue": 0
+        },
+        "displaycorrectrightbottomy": {
+            "currentvalue": 0
+        },
+        "bbuildareaoffsetenable": {
+            "currentvalue": false
+        },
+        "buildareaoffsetleft": {
+            "currentvalue": 0
+        },
+        "buildareaoffsetright": {
+            "currentvalue": 0
+        },
+        "buildareaoffsettop": {
+            "currentvalue": 0
+        },
+        "buildareaoffsetbottom": {
+            "currentvalue": 0
+        },
+        "printtype": {
+            "currentvalue": 0
+        },
+        "mirrortype": {
+            "currentvalue": 0
+        },
+        "sliceformat": {
+            "currentvalue": 0
+        },
+        "zliftheightinsupportmode": {
+            "currentvalue": 5
+        },
+        "raftshape": {
+            "currentvalue": 0
+        },
+        "autoSupportMode": {
+            "currentvalue": 0
+        },
+        "autoSupportType": {
+            "currentvalue": 2
+        }
+    },
+    "current_support": 2,
+    "current_material": 0,
+    "current_magic": 0,
+    "current_multislice": 0,
+    "material": [
+        {
+            "name": "Default",
+            "id": "",
+            "visible": true,
+            "current_slice": 0,
+            "current_support": 0,
+            "user_data": true,
+            "slice": [
+                {
+                    "visible": true,
+                    "name": "8K White/Gray .2 Height",
+                    "resin": {
+                        "visible": true,
+                        "resintype": {
+                            "currentvalue": "normal"
+                        },
+                        "resindensity": {
+                            "currentvalue": 1.1
+                        },
+                        "resincost": {
+                            "currentvalue": 30
+                        },
+                        "resinunit": {
+                            "currentvalue": 1
+                        },
+                        "resincostmeasure": {
+                            "currentvalue": 1
+                        },
+                        "resinmassunit": {
+                            "currentvalue": 0
+                        },
+                        "color": {
+                            "currentvalue": 0
+                        },
+                        "is_transparent": {
+                            "currentvalue": false
+                        },
+                        "name": {
+                            "currentvalue": "8K White/Gray .2 Height"
+                        }
+                    },
+                    "print": {
+                        "visible": true,
+                        "bottom_layer_drop_height_visible": false,
+                        "normal_layer_drop_height_visible": false,
+                        "matchingresinmodel": {
+                            "currentvalue": 0
+                        },
+                        "matchingresintips": {
+                            "currentvalue": ""
+                        },
+                        "layerheight": {
+                            "currentvalue": 0.02
+                        },
+                        "bottomlayercount": {
+                            "currentvalue": 5
+                        },
+                        "normalexposuretime": {
+                            "currentvalue": 1.2
+                        },
+                        "bottomlayerexposuretime": {
+                            "currentvalue": 32
+                        },
+                        "transitionlayercount": {
+                            "currentvalue": 10
+                        },
+                        "transitionlayertype": {
+                            "currentvalue": 0
+                        },
+                        "printwaitmode": {
+                            "currentvalue": 0
+                        },
+                        "normalresttimebeforelift": {
+                            "currentvalue": 0.5
+                        },
+                        "bottomresttimebeforelift": {
+                            "currentvalue": 0.5
+                        },
+                        "normalresttimeafterretract": {
+                            "currentvalue": 1.2
+                        },
+                        "bottomresttimeafterretract": {
+                            "currentvalue": 1.2
+                        },
+                        "normalresttimeafterlift": {
+                            "currentvalue": 0
+                        },
+                        "bottomresttimeafterlift": {
+                            "currentvalue": 0
+                        },
+                        "lightofftime": {
+                            "currentvalue": 0
+                        },
+                        "bottomlightofftime": {
+                            "currentvalue": 0
+                        },
+                        "bottomlayerliftheight": {
+                            "currentvalue": 0.05
+                        },
+                        "normallayerliftheight": {
+                            "currentvalue": 0.05
+                        },
+                        "bottomlayerliftheight2": {
+                            "currentvalue": 0
+                        },
+                        "normallayerliftheight2": {
+                            "currentvalue": 0
+                        },
+                        "bottomlayerliftspeed": {
+                            "currentvalue": 0.05
+                        },
+                        "normallayerliftspeed": {
+                            "currentvalue": 0.05
+                        },
+                        "bottomlayerliftspeed2": {
+                            "currentvalue": 0
+                        },
+                        "normallayerliftspeed2": {
+                            "currentvalue": 0
+                        },
+                        "bottomlayerdropspeed": {
+                            "currentvalue": 0.05
+                        },
+                        "normallayerdropspeed": {
+                            "currentvalue": 0.05
+                        },
+                        "bottomlayerdropspeed2": {
+                            "currentvalue": 0
+                        },
+                        "normallayerdropspeed2": {
+                            "currentvalue": 0
+                        },
+                        "normallayerdropheight2": {
+                            "currentvalue": 0
+                        },
+                        "bottomlayerdropheight2": {
+                            "currentvalue": 0
+                        },
+                        "edgeexposuremm": {
+                            "currentvalue": 0
+                        },
+                        "bottomedgeexposuremm": {
+                            "currentvalue": 0
+                        },
+                        "edgeexposuretimes": {
+                            "currentvalue": 4
+                        },
+                        "bottomedgeexposuretimes": {
+                            "currentvalue": 4
+                        },
+                        "ac_mode_type": {
+                            "currentvalue": true
+                        },
+                        "bufferenable": {
+                            "currentvalue": false
+                        },
+                        "bufferheight": {
+                            "currentvalue": 0
+                        },
+                        "bufferMotrospeed": {
+                            "currentvalue": 0
+                        },
+                        "bufferlightoffdelay": {
+                            "currentvalue": 0
+                        }
+                    },
+                    "gcode": {
+                        "visible": false,
+                        "bgcode": {
+                            "currentvalue": true
+                        },
+                        "startgcode": {
+                            "currentvalue": ""
+                        },
+                        "layergcode": {
+                            "currentvalue": ""
+                        },
+                        "endgcode": {
+                            "currentvalue": ""
+                        }
+                    },
+                    "advanced": {
+                        "visible": true,
+                        "bottomlightintensitypwm": {
+                            "currentvalue": 255
+                        },
+                        "bottomlightintensitypwmshowmode": {
+                            "currentvalue": 0
+                        },
+                        "normallightintensitypwm": {
+                            "currentvalue": 255
+                        },
+                        "normallightintensitypwmshowmode": {
+                            "currentvalue": 0
+                        },
+                        "bantialiasing": {
+                            "currentvalue": true
+                        },
+                        "edgeblurtype": {
+                            "currentvalue": 0
+                        },
+                        "antialiaslevel": {
+                            "currentvalue": 4
+                        },
+                        "midgreylevel": {
+                            "currentvalue": 255
+                        },
+                        "mingreylevel": {
+                            "currentvalue": 95
+                        },
+                        "maxgreylevel": {
+                            "currentvalue": 255
+                        },
+                        "bimageblur": {
+                            "currentvalue": true
+                        },
+                        "imageblurpixel": {
+                            "currentvalue": 2
+                        },
+                        "binnerouttercircleoffsetenable": {
+                            "currentvalue": false
+                        },
+                        "bprinttimecompensationenable": {
+                            "currentvalue": false
+                        },
+                        "innercircleoffset": {
+                            "currentvalue": 0
+                        },
+                        "outtercircleoffset": {
+                            "currentvalue": 0
+                        },
+                        "circleparitydifference": {
+                            "currentvalue": 0
+                        },
+                        "bbottominnerouttercircleoffsetenable": {
+                            "currentvalue": false
+                        },
+                        "bottominnercircleoffset": {
+                            "currentvalue": 0
+                        },
+                        "bottomouttercircleoffset": {
+                            "currentvalue": 0
+                        },
+                        "bimagemask": {
+                            "currentvalue": false
+                        },
+                        "imagemaskfile": {
+                            "currentvalue": ""
+                        },
+                        "bsurfacerougheditable": {
+                            "currentvalue": false
+                        },
+                        "surfaceroughlevel": {
+                            "currentvalue": 1
+                        },
+                        "maskgrayscaleunit": {
+                            "currentvalue": 4
+                        },
+                        "modelsupporttimesub": {
+                            "currentvalue": 0
+                        },
+                        "softwareprintingtimehour": {
+                            "currentvalue": 0
+                        },
+                        "softwareprintingtimeminute": {
+                            "currentvalue": 0
+                        },
+                        "softwareprintingtimesecond": {
+                            "currentvalue": 0
+                        },
+                        "actualprintingtimehour": {
+                            "currentvalue": 0
+                        },
+                        "actualprintingtimeminute": {
+                            "currentvalue": 0
+                        },
+                        "actualprintingtimesecond": {
+                            "currentvalue": 0
+                        },
+                        "printinglayer": {
+                            "currentvalue": 1
+                        },
+                        "layerprinttime": {
+                            "currentvalue": 6.79
+                        },
+                        "enable_obscure": {
+                            "currentvalue": true
+                        },
+                        "obscure_level": {
+                            "currentvalue": 0
+                        },
+                        "enable_scale_compensation": {
+                            "currentvalue": false
+                        },
+                        "compensation_x": {
+                            "currentvalue": 100
+                        },
+                        "compensation_y": {
+                            "currentvalue": 100
+                        },
+                        "compensation_z": {
+                            "currentvalue": 100
+                        },
+                        "centerOffsetX": {
+                            "currentvalue": 0
+                        },
+                        "centerOffsetY": {
+                            "currentvalue": 0
+                        },
+                        "centerCount": {
+                            "currentvalue": 5
+                        },
+                        "centerRadius": {
+                            "currentvalue": 50
+                        },
+                        "matrixXCount": {
+                            "currentvalue": 5
+                        },
+                        "matrixYCount": {
+                            "currentvalue": 5
+                        },
+                        "printMode": {
+                            "currentvalue": 0
+                        }
+                    },
+                    "id": ""
+                }
+            ]
+        }
+    ],
+    "support": [],
+    "magic": [],
+    "multiSliceConfig": {
+        "areaSliceModel": {
+            "defaultProFileCurIndex": 0,
+            "sliceModel": []
+        },
+        "heightSliceModel": {
+            "defaultProFileCurIndex": 0,
+            "sliceModel": []
+        },
+        "modelSliceModel": {
+            "defaultProFileCurIndex": 0,
+            "sliceModel": []
+        }
+    }
+}
